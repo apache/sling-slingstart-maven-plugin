@@ -29,6 +29,7 @@
     <description>
         Maven Plugin supporting Sling Launchpad
     </description>
+    <url>https://sling.apache.org/components/slingstart-maven-plugin/</url>
 
     <properties>
         <maven.version>3.0.5</maven.version>
