@@ -30,6 +30,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.archiver.jar.JarArchiver;
 
 /**
@@ -51,6 +52,13 @@ public class PackageMojo extends AbstractSlingStartMojo {
      */
     @Parameter(defaultValue="false")
     protected boolean createWebapp;
+    
+    /**
+     * If set to {@code true} does not attach the generated artifact to Maven.
+     * This setting does only apply if the packaging of the current Maven project is not "slingstart".
+     */
+    @Parameter(defaultValue="true")
+    protected boolean attachArtifact;
 
     /**
      * The Jar archiver.
@@ -92,7 +100,11 @@ public class PackageMojo extends AbstractSlingStartMojo {
             if ( BuildConstants.PACKAGING_SLINGSTART.equals(project.getPackaging()) ) {
                 project.getArtifact().setFile(outputFile);
             } else {
-                projectHelper.attachArtifact(project, BuildConstants.TYPE_JAR, BuildConstants.CLASSIFIER_APP, outputFile);
+                if (!attachArtifact) {
+                    this.getLog().info("Do not attach the standalone jar to this Maven project");
+                } else {
+                    projectHelper.attachArtifact(project, BuildConstants.TYPE_JAR, BuildConstants.CLASSIFIER_APP, outputFile);
+                }
             }
         } catch ( final IOException ioe) {
             throw new MojoExecutionException("Unable to create standalone jar", ioe);
@@ -120,24 +132,32 @@ public class PackageMojo extends AbstractSlingStartMojo {
 
             helper.createArchive();
 
-            projectHelper.attachArtifact(project, BuildConstants.TYPE_WAR, BuildConstants.CLASSIFIER_WEBAPP, outputFile);
+            if (!attachArtifact) {
+                this.getLog().info("Do not attach the webapp to this Maven project");
+            } else {
+                projectHelper.attachArtifact(project, BuildConstants.TYPE_WAR, BuildConstants.CLASSIFIER_WEBAPP, outputFile);
+            }
         }
     }
 
-    /**
-     *
-     * @param extension the extension including the leading dot to be used for the file name.
-     * @return the absolute file name of the to be created artifact.
-     */
-    private File getBuildFile(final String extension) {
-        final File buildDirectory = new File(this.project.getBuild().getDirectory());
-        final File buildFile;
-        if ( BuildConstants.PACKAGING_SLINGSTART.equals(project.getPackaging()) ) {
-            buildFile = new File(buildDirectory, this.project.getBuild().getFinalName() + extension);
-        } else {
-            // make sure this filename does not conflict with any other project artifacts (primary or secondary)
-            buildFile = new File(buildDirectory, this.project.getBuild().getFinalName() + ".launchpad" + extension);
-        }
-        return buildFile;
-    }
+   /**
+    *
+    * @param extension the extension including the leading dot to be used for the file name.
+    * @return the absolute file name of the to be created artifact.
+    */
+   private File getBuildFile(final String extension) {
+       final File buildDirectory = new File(this.project.getBuild().getDirectory());
+       final File buildFile;
+       if ( BuildConstants.PACKAGING_SLINGSTART.equals(project.getPackaging()) ) {
+           buildFile = new File(buildDirectory, this.project.getBuild().getFinalName() + extension);
+       } else {
+           buildFile = getNonPrimaryBuildFile(project, extension);
+       }
+       return buildFile;
+   }
+
+   public static File getNonPrimaryBuildFile(final MavenProject project, final String extension) {
+       final File buildDirectory = new File(project.getBuild().getDirectory());
+       return new File(buildDirectory, project.getBuild().getFinalName() + ".launchpad" + extension);
+   }
 }
