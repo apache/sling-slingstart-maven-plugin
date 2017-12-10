@@ -94,7 +94,7 @@ public abstract class AbstractSlingStartMojo extends AbstractMojo {
     protected MavenSession mavenSession;
 
     /**
-     * If set to true, properties from the Maven POM can be used as variables in the provisioning files.
+     * If set to {@code true}, properties from the Maven POM can be used as variables in the provisioning files.
      * The resolved variables are added to the generated provisioning file, so other tools using this model
      * do not have to resolve them themselves.
      */
@@ -102,8 +102,14 @@ public abstract class AbstractSlingStartMojo extends AbstractMojo {
     protected boolean usePomVariables;
 
     /**
-     * If set to true, Artifact dependencies from provisioning file without explicit version are tried
-     * to be resolved against the dependency versions from the Maven POM.
+     * If set to {@code true}, Artifact dependencies from provisioning file without explicit version are tried
+     * to be resolved against the versions given in the Maven POM.
+     * The following sections in the effective pom are considered during resolving the version:
+     * <ol>
+     *   <li>The project's artifact itself</li>
+     *   <li>The project's dependencies</li>
+     *   <li>The project's dependencyManagement</li>
+     * </ol>
      */
     @Parameter(defaultValue="false")
     protected boolean usePomDependencies;
