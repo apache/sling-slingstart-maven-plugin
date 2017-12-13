@@ -50,6 +50,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.sling.maven.slingstart.BuildConstants;
+import org.apache.sling.maven.slingstart.PackageMojo;
 
 /**
  * Start one or multiple launchpad instance(s).
@@ -400,7 +401,14 @@ public class StartMojo extends AbstractStartStopMojo {
                 return attachedArtifact.getFile();
             }
         }
-
+        
+        // also check for jars in known target folders (in case the jar has been created in this project's target folder but not attached to the Maven project)
+        File localJarFile = PackageMojo.getNonPrimaryBuildFile(project, ".jar");
+        if (localJarFile.exists()) {
+            getLog().info("Using local launchpad jar being created in predefined directory: '" +  localJarFile + "'!");
+            return localJarFile;
+        }
+        
         // Last chance: use the first declared dependency with type "slingstart"
         final Set<Artifact> dependencies = this.project.getDependencyArtifacts();
         for (final Artifact dep : dependencies) {
