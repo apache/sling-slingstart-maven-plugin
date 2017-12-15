@@ -54,7 +54,7 @@ public class PackageMojo extends AbstractSlingStartMojo {
     protected boolean createWebapp;
     
     /**
-     * If set to {@code true} does not attach the generated artifact to Maven.
+     * If set to {@code false} does not attach the generated artifact to Maven.
      * This setting does only apply if the packaging of the current Maven project is not "slingstart".
      */
     @Parameter(defaultValue="true")
