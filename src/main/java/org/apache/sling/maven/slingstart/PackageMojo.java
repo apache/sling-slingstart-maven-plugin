@@ -55,7 +55,8 @@ public class PackageMojo extends AbstractSlingStartMojo {
     
     /**
      * If set to {@code false} does not attach the generated artifact to Maven.
-     * This setting does only apply if the packaging of the current Maven project is not "slingstart".
+     * This setting takes only effect if the packaging of the current Maven project is not {@code slingstart}.
+     * Otherwise the generated artifact is always the main artifact (and is therefore always attached).
      */
     @Parameter(defaultValue="true")
     protected boolean attachArtifact;
