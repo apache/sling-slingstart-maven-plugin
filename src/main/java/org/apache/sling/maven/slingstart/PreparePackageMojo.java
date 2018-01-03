@@ -392,7 +392,7 @@ public class PreparePackageMojo extends AbstractSlingStartMojo {
                 startLevelHolder.set(sl);
             addReadme(os);
         } catch (IOException ioe) {
-            throw new MojoExecutionException("Problem creating subsystem .esa file " + subsystemFile + " due to " + ioe.getMessage(), ioe);
+            throw new MojoExecutionException("Problem creating subsystem .esa file " + subsystemFile, ioe);
         }
         return subsystemFile;
     }
