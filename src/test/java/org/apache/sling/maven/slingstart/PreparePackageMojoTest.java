@@ -144,7 +144,6 @@ public class PreparePackageMojoTest {
                 "org.apache.sling/org.apache.sling.commons.contentdetection/1.0.2",
                 "org.apache.sling/org.apache.sling.commons.johnzon/1.0.0",
                 "org.apache.sling/org.apache.sling.commons.mime/2.1.8",
-                "org.apache.sling/org.apache.sling.commons.osgi/2.3.0",
                 "org.apache.sling/org.apache.sling.commons.threads/3.2.0");
 
         try {
@@ -159,9 +158,6 @@ public class PreparePackageMojoTest {
                     "[:subsystem-manifest startLevel=123]\n" +
                     "  Subsystem-Description: Extra subsystem headers can go here including very long ones that would span multiple lines in a manifest\n" +
                     "  Subsystem-Copyright: (c) 2015 yeah!\n" +
-                    "" +
-                    "[artifacts]\n" +
-                    "  org.apache.sling/org.apache.sling.commons.osgi/2.3.0\n" +
                     "" +
                     "[artifacts startLevel=10]\n" +
                     "  org.apache.sling/org.apache.sling.commons.johnzon/1.0.0\n" +
@@ -180,8 +176,7 @@ public class PreparePackageMojoTest {
                 // Test META-INF/MANIFEST.MF
                 Manifest mf = jf.getManifest();
                 Attributes attrs = mf.getMainAttributes();
-                String expected = "Potential_Bundles/0/org.apache.sling.commons.osgi-2.3.0.jar|"
-                        + "Potential_Bundles/10/org.apache.sling.commons.johnzon-1.0.0.jar|"
+                String expected = "Potential_Bundles/10/org.apache.sling.commons.johnzon-1.0.0.jar|"
                         + "Potential_Bundles/10/org.apache.sling.commons.mime-2.1.8.jar";
                 assertEquals(expected, attrs.getValue("_all_"));
                 assertEquals("Potential_Bundles/20/org.apache.sling.commons.threads-3.2.0.jar", attrs.getValue("foo"));
@@ -203,11 +198,6 @@ public class PreparePackageMojoTest {
 
                 // Test embedded bundles
                 File mrr = getMavenRepoRoot();
-                File soj = getMavenArtifactFile(mrr, "org.apache.sling", "org.apache.sling.commons.osgi", "2.3.0");
-                ZipEntry sojZE = jf.getEntry("Potential_Bundles/0/org.apache.sling.commons.osgi-2.3.0.jar");
-                try (InputStream is = jf.getInputStream(sojZE)) {
-                    assertArtifactsEqual(soj, is);
-                }
 
                 File sjj = getMavenArtifactFile(mrr, "org.apache.sling", "org.apache.sling.commons.johnzon", "1.0.0");
                 ZipEntry sjZE = jf.getEntry("Potential_Bundles/10/org.apache.sling.commons.johnzon-1.0.0.jar");
