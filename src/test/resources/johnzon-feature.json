@@ -1,0 +1,4 @@
+{
+    "id": "org.apache.sling.test.features/johnzon-feature/1.0.0",
+    "bundles": ["org.apache.sling/org.apache.sling.commons.johnzon/1.0.0"] 
+}
