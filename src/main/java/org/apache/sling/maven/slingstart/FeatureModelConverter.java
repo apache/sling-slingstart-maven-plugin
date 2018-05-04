@@ -16,6 +16,16 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import org.apache.maven.MavenExecutionException;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.project.MavenProject;
+import org.apache.sling.feature.io.ArtifactManager;
+import org.apache.sling.feature.io.ArtifactManagerConfig;
+import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
+import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
+import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,16 +33,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.maven.MavenExecutionException;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.project.MavenProject;
-import org.apache.sling.feature.io.ArtifactManager;
-import org.apache.sling.feature.io.ArtifactManagerConfig;
-import org.apache.sling.feature.modelconverter.impl.FeatureToProvisioning;
-import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
-import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
 
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
