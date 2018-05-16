@@ -64,8 +64,8 @@ public class FeatureModelConverter {
         try {
             ArtifactManager am = getArtifactManager(project, session);
             for (File f : files) {
-                String fn = targetDir.getAbsolutePath() + "/" + f.getName() + ".txt";
-                FeatureToProvisioning.convert(f, fn, am);
+                File genFile = new File(targetDir, f.getName() + ".txt");
+                FeatureToProvisioning.convert(f, genFile, am);
             }
         } catch (Exception e) {
             throw new MavenExecutionException("Cannot convert feature files to provisioning model", e);
