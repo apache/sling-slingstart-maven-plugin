@@ -124,21 +124,24 @@ public class ModelPreprocessor {
                 // use multiple fallbacks here only in case the default model directory is not explicitly set
                 File defaultModelDirectory = new File(info.project.getBasedir(), "src/main/provisioning");
                 File defaultConvertedModelDirectory = new File(info.project.getBuild().getDirectory() + "/" + FeatureModelConverter.BUILD_DIR);
+                File defaultModelDirectoryInTest = new File(info.project.getBasedir(), "src/test/provisioning");
 
-                if (defaultModelDirectory.exists() && defaultConvertedModelDirectory.exists()) {
-                    // The model is partially converted, partially explicitly defined. Copy the defined ones in with the converted ones
-                    for (File f : defaultModelDirectory.listFiles()) {
-                        File targetFile = new File(defaultConvertedModelDirectory, f.getName());
-                        if (targetFile.exists()) {
-                            env.logger.debug("File already exists. Skipping: " + targetFile);
-                        } else {
-                            env.logger.debug("Copying " + f + " to " + targetFile);
-                            Files.copy(f.toPath(), targetFile.toPath());
+                if (defaultModelDirectory.exists()) {
+                    if (defaultConvertedModelDirectory.exists()) {
+                        // The model is partially converted, partially explicitly defined. Copy the defined ones in with the converted ones
+                        for (File f : defaultModelDirectory.listFiles()) {
+                            File targetFile = new File(defaultConvertedModelDirectory, f.getName());
+                            if (targetFile.exists()) {
+                                env.logger.debug("File already exists. Skipping: " + targetFile);
+                            } else {
+                                env.logger.debug("Copying " + f + " to " + targetFile);
+                                Files.copy(f.toPath(), targetFile.toPath());
+                            }
                         }
+                    } else {
+                        env.logger.debug("Try to extract model from default provisioning directory " + defaultModelDirectory.getAbsolutePath());
+                        info.localModel = readLocalModel(info.project, inlinedModel, defaultModelDirectory, pattern, env.logger);
                     }
-                } else {
-                    env.logger.debug("Try to extract model from default provisioning directory " + defaultModelDirectory.getAbsolutePath());
-                    info.localModel = readLocalModel(info.project, inlinedModel, defaultModelDirectory, pattern, env.logger);
                 }
 
                 if (defaultConvertedModelDirectory.exists()) {
@@ -146,11 +149,14 @@ public class ModelPreprocessor {
                     info.localModel = readLocalModel(info.project, inlinedModel, defaultConvertedModelDirectory, pattern, env.logger);
                 }
 
-                if (info.localModel == null) {
-                    File defaultModelDirectoryInTest = new File(info.project.getBasedir(), "src/test/provisioning");
+                if (defaultModelDirectoryInTest.exists()) {
                     env.logger.debug("Try to extract model from default test provisioning directory " + defaultModelDirectoryInTest.getAbsolutePath());
                     info.localModel = readLocalModel(info.project, inlinedModel, defaultModelDirectoryInTest, pattern, env.logger);
                     scope = Artifact.SCOPE_TEST;
+                }
+
+                if (info.localModel == null) {
+                    info.localModel = new Model();
                 }
             }
         } catch ( final IOException ioe) {
