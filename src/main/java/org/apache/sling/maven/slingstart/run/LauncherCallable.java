@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.lang.ProcessBuilder.Redirect;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +98,7 @@ public class LauncherCallable implements Callable<ProcessDescription> {
                 } catch ( final IllegalThreadStateException itse) {
                     // everything as expected
                 }
+                
             }
 
             if ( finished ) {
@@ -103,6 +106,16 @@ public class LauncherCallable implements Callable<ProcessDescription> {
             }
             if ( !started ) {
                 throw new Exception("Launchpad did not start successfully in " + this.environment.getReadyTimeOutSec() + " seconds.");
+            }
+            // now check for the availability of the HTTP port
+            boolean httpAvailable = isLocalhostPortAvailable(Integer.valueOf(this.configuration.getPort()));
+            // repeat until http service is up as well
+            while ( !httpAvailable && System.currentTimeMillis() < endTime ) {
+                Thread.sleep(1000);
+                httpAvailable = isLocalhostPortAvailable(Integer.valueOf(this.configuration.getPort()));
+            }
+            if ( !httpAvailable ) {
+                throw new Exception("Launchpad did not start http service on port " + this.configuration.getPort() + " successfully in " + this.environment.getReadyTimeOutSec() + " seconds.");
             }
             this.logger.info("Started Launchpad '" + configuration.getId() +
                     "' at port " + configuration.getPort()+ " [run modes: " + configuration.getRunmode()+ "]");
@@ -119,6 +132,28 @@ public class LauncherCallable implements Callable<ProcessDescription> {
         }
 
         return cfg;
+    }
+
+    private boolean isLocalhostPortAvailable(int port) throws IOException {
+        // https://stackoverflow.com/questions/46436813/difference-between-a-connection-refused-exception-and-a-timeout-in-httpclient
+        Socket clientSocket = new Socket();
+        try {
+            clientSocket.connect(new InetSocketAddress("127.0.0.1", port), 500);
+            // without that, read() call on the InputStream associated with this Socket is infinite
+            this.logger.debug("Successfully connected to localhost, port " + port);
+            clientSocket.close();
+            return true;
+        } catch (SocketTimeoutException e) {
+            // we ran into a timeout (port most probably blocked by firewall)
+            this.logger.debug("Ran into a timeout while connecting to localhost, port " + port, e);
+            return false;
+        } catch (ConnectException e) {
+            // port not bound
+            this.logger.debug("Could not connect to localhost, port " + port, e);
+            return false;
+        } finally {
+            clientSocket.close();
+        }
     }
 
     public boolean isRunning() {
