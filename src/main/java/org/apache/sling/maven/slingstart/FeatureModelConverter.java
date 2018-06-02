@@ -64,6 +64,9 @@ public class FeatureModelConverter {
         try {
             ArtifactManager am = getArtifactManager(project, session);
             for (File f : files) {
+                if (!f.getName().endsWith(".json")) {
+                    continue;
+                }
                 File genFile = new File(targetDir, f.getName() + ".txt");
                 FeatureToProvisioning.convert(f, genFile, am);
             }

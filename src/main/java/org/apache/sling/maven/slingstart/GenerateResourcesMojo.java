@@ -79,6 +79,10 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
             ArtifactManager am = getArtifactManager();
             List<File> files = Arrays.asList(featureFiles);
             for (File f : files) {
+                if (!f.getName().endsWith(".json")) {
+                    continue;
+                }
+
                 File genFile = new File(targetDir, f.getName() + ".txt");
                 FeatureToProvisioning.convert(f, genFile, am);
             }

@@ -124,6 +124,7 @@
                 <configuration>
                     <excludes>
                         <exclude>src/site/markdown/**</exclude>
+                        <exclude>src/test/resources/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
