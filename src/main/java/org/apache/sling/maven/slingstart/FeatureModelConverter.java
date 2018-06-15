@@ -68,7 +68,7 @@ public class FeatureModelConverter {
                     continue;
                 }
                 File genFile = new File(targetDir, f.getName() + ".txt");
-                FeatureToProvisioning.convert(f, genFile, am);
+                FeatureToProvisioning.convert(f, genFile, am, files);
             }
         } catch (Exception e) {
             throw new MavenExecutionException("Cannot convert feature files to provisioning model", e);

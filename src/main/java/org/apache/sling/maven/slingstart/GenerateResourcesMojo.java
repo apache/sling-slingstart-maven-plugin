@@ -84,7 +84,7 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
                 }
 
                 File genFile = new File(targetDir, f.getName() + ".txt");
-                FeatureToProvisioning.convert(f, genFile, am);
+                FeatureToProvisioning.convert(f, genFile, am, files.toArray(new File[] {}));
             }
         } catch (Exception e) {
             throw new MojoExecutionException("Cannot convert feature files to provisioning model", e);
