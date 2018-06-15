@@ -27,55 +27,99 @@ import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
 import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
 
-    public void convert(MavenSession session, Environment env) throws MavenExecutionException {
+    public static void convert(MavenSession session, Environment env) throws MavenExecutionException {
         Map<String, ProjectInfo> projs = env.modelProjects;
         for (ProjectInfo pi : projs.values()) {
             convert(session, pi.project);
         }
     }
 
-    private void convert(MavenSession session, MavenProject project) throws MavenExecutionException {
+    private static void convert(MavenSession session, MavenProject project) throws MavenExecutionException {
         File featuresDir = new File(project.getBasedir(), "src/main/features");
 
         File[] files = featuresDir.listFiles();
-        List<File> featureFiles;
-        if (files != null) {
-            featureFiles = Arrays.asList(files);
-        } else {
-            featureFiles = Collections.emptyList();
+        if (files == null || files.length == 0)
+            return;
+
+        ArtifactManager am;
+        try {
+            am = getArtifactManager(project, session);
+        } catch (IOException ex) {
+            throw new MavenExecutionException("Unable to obtain artifactManager", ex);
         }
 
-        if (featureFiles.size() == 0)
-            return;
+        convert(files, project, am);
+    }
+
+    static void convert(File[] files, MavenProject project, ArtifactManager am) throws MavenExecutionException {
+        File processedFeaturesDir = new File(project.getBuild().getDirectory(), "features/processed");
+        processedFeaturesDir.mkdirs();
+
+        List<File> substedFiles = new ArrayList<>();
+        for (File f : files) {
+            if (!f.getName().endsWith(".json")) {
+                continue;
+            }
+
+            try {
+                substedFiles.add(substituteVars(project, f, processedFeaturesDir));
+            } catch (IOException e) {
+                throw new MavenExecutionException("Problem processing feature file " + f.getAbsolutePath(), e);
+            }
+        }
 
         File targetDir = new File(project.getBuild().getDirectory(), BUILD_DIR);
         targetDir.mkdirs();
 
         try {
-            ArtifactManager am = getArtifactManager(project, session);
             for (File f : files) {
                 if (!f.getName().endsWith(".json")) {
                     continue;
                 }
                 File genFile = new File(targetDir, f.getName() + ".txt");
-                FeatureToProvisioning.convert(f, genFile, am, files);
+                FeatureToProvisioning.convert(f, genFile, am, substedFiles.toArray(new File[] {}));
             }
         } catch (Exception e) {
             throw new MavenExecutionException("Cannot convert feature files to provisioning model", e);
         }
     }
 
-    private ArtifactManager getArtifactManager(MavenProject project, MavenSession session)
+    private static File substituteVars(MavenProject project, File f, File processedFeaturesDir) throws IOException {
+        File file = new File(processedFeaturesDir, f.getName());
+
+        if (file.exists() && file.lastModified() > f.lastModified()) {
+            // The file already exists, so we don't need to write it again
+            return file;
+        }
+
+        try (FileWriter fw = new FileWriter(file)) {
+            for (String s : Files.readAllLines(f.toPath())) {
+                fw.write(replaceVars(project, s));
+                fw.write(System.getProperty("line.separator"));
+            }
+        }
+        return file;
+    }
+
+    static String replaceVars(MavenProject project, String s) {
+        // There must be a better way than enumerating all these?
+        s = s.replaceAll("\\Q${project.groupId}\\E", project.getGroupId());
+        s = s.replaceAll("\\Q${project.artifactId}\\E", project.getArtifactId());
+        s = s.replaceAll("\\Q${project.version}\\E", project.getVersion());
+        return s;
+    }
+
+    private static ArtifactManager getArtifactManager(MavenProject project, MavenSession session)
             throws IOException {
         List<String> repos = new ArrayList<>();
         repos.add(session.getLocalRepository().getUrl());

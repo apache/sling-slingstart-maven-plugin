@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -87,8 +88,7 @@ public class FeatureModelConverterTest {
         Environment env = new Environment();
         env.modelProjects.put("xyz", pi);
 
-        FeatureModelConverter fmc = new FeatureModelConverter();
-        fmc.convert(session, env);
+        FeatureModelConverter.convert(session, env);
 
         File expectedFile = new File(tempDir, "/provisioning/converted/boot_gav.json.txt");
         assertTrue(expectedFile.exists());
@@ -113,6 +113,7 @@ public class FeatureModelConverterTest {
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
+        Mockito.when(proj.getGroupId()).thenReturn("generated");
 
         ProjectInfo pi = new ProjectInfo();
         pi.project = proj;
@@ -120,8 +121,7 @@ public class FeatureModelConverterTest {
         Environment env = new Environment();
         env.modelProjects.put("xyz", pi);
 
-        FeatureModelConverter fmc = new FeatureModelConverter();
-        fmc.convert(session, env);
+        FeatureModelConverter.convert(session, env);
 
         File simpleProvFile = new File(tempDir, "/provisioning/converted/simple.json.txt");
         String simpleProv = new String(Files.readAllBytes(simpleProvFile.toPath()));
@@ -132,5 +132,19 @@ public class FeatureModelConverterTest {
         String inheritsProv = new String(Files.readAllBytes(inheritsProvFile.toPath()));
         assertTrue(inheritsProv.contains("org.apache.aries/org.apache.aries.util/1.1.3"));
         assertTrue(inheritsProv.contains("org.apache.sling/org.apache.sling.commons.log/5.1.0"));
+    }
+
+    @Test
+    public void testReplaceVars() {
+        MavenProject mp = Mockito.mock(MavenProject.class);
+
+        Mockito.when(mp.getGroupId()).thenReturn("abc");
+        Mockito.when(mp.getArtifactId()).thenReturn("a.b.c");
+        Mockito.when(mp.getVersion()).thenReturn("1.2.3-SNAPSHOT");
+
+        assertEquals("xxxabcyyy", FeatureModelConverter.replaceVars(mp,
+                "xxx${project.groupId}yyy"));
+        assertEquals("xxxabcyyya.b.c1.2.3-SNAPSHOT", FeatureModelConverter.replaceVars(mp,
+                "xxx${project.groupId}yyy${project.artifactId}${project.version}"));
     }
 }

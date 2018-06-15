@@ -1,5 +1,5 @@
 {
-  "id":"generated:simple-inherits:1.0.0",
+  "id":"${project.groupId}:simple-inherits:1.0.0",
   "includes": [
        {
            "id": "generated:simple:1.0.0"

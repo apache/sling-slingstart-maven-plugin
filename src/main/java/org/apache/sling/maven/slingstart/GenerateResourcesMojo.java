@@ -16,6 +16,7 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -29,13 +30,11 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.sling.feature.io.ArtifactManager;
 import org.apache.sling.feature.io.ArtifactManagerConfig;
-import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Mojo(
@@ -72,22 +71,12 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
         if (featureFiles == null)
             return;
 
-        File targetDir = new File(project.getBuild().getDirectory(), FeatureModelConverter.BUILD_DIR);
-        targetDir.mkdirs();
-
         try {
-            ArtifactManager am = getArtifactManager();
-            List<File> files = Arrays.asList(featureFiles);
-            for (File f : files) {
-                if (!f.getName().endsWith(".json")) {
-                    continue;
-                }
-
-                File genFile = new File(targetDir, f.getName() + ".txt");
-                FeatureToProvisioning.convert(f, genFile, am, files.toArray(new File[] {}));
-            }
-        } catch (Exception e) {
-            throw new MojoExecutionException("Cannot convert feature files to provisioning model", e);
+            FeatureModelConverter.convert(featureFiles, project, getArtifactManager());
+        } catch (MavenExecutionException e) {
+            throw new MojoExecutionException("Cannot convert feature files to provisioning model.", e);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Problem obtaining artifact manager.", e);
         }
     }
 
