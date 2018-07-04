@@ -82,7 +82,7 @@ public class FeatureModelConverter {
         targetDir.mkdirs();
 
         try {
-            for (File f : files) {
+            for (File f : substedFiles) {
                 if (!f.getName().endsWith(".json")) {
                     continue;
                 }
