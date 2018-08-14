@@ -16,6 +16,10 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 import org.apache.maven.AbstractMavenLifecycleParticipant;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
@@ -28,10 +32,6 @@ import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.logging.Logger;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 /**
  * Maven lifecycle participant which adds the artifacts of the model to the dependencies.
@@ -97,7 +97,7 @@ public class DependencyLifecycleParticipant extends AbstractMavenLifecyclePartic
             }
         }
 
-        new FeatureModelConverter().convert(session, env);
+        FeatureModelConverter.convert(session, env);
         new ModelPreprocessor().addDependencies(env);
     }
 
