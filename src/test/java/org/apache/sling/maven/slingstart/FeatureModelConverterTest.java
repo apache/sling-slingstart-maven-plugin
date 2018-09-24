@@ -32,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -138,13 +139,18 @@ public class FeatureModelConverterTest {
     public void testReplaceVars() {
         MavenProject mp = Mockito.mock(MavenProject.class);
 
+        Properties props = new Properties();
+        props.put("foo", "bar");
+
         Mockito.when(mp.getGroupId()).thenReturn("abc");
         Mockito.when(mp.getArtifactId()).thenReturn("a.b.c");
         Mockito.when(mp.getVersion()).thenReturn("1.2.3-SNAPSHOT");
+        Mockito.when(mp.getProperties()).thenReturn(props);
 
         assertEquals("xxxabcyyy", FeatureModelConverter.replaceVars(mp,
                 "xxx${project.groupId}yyy"));
         assertEquals("xxxabcyyya.b.c1.2.3-SNAPSHOT", FeatureModelConverter.replaceVars(mp,
                 "xxx${project.groupId}yyy${project.artifactId}${project.version}"));
+        assertEquals("xxxbaryyy", FeatureModelConverter.replaceVars(mp, "xxx${foo}yyy"));
     }
 }

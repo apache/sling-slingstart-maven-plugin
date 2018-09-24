@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
@@ -113,10 +114,23 @@ public class FeatureModelConverter {
 
     static String replaceVars(MavenProject project, String s) {
         // There must be a better way than enumerating all these?
-        s = s.replaceAll("\\Q${project.groupId}\\E", project.getGroupId());
-        s = s.replaceAll("\\Q${project.artifactId}\\E", project.getArtifactId());
-        s = s.replaceAll("\\Q${project.version}\\E", project.getVersion());
+        s = replaceAll(s, "project.groupId", project.getGroupId());
+        s = replaceAll(s, "project.artifactId", project.getArtifactId());
+        s = replaceAll(s, "project.version", project.getVersion());
+
+
+        Properties props = project.getProperties();
+        if (props != null) {
+            for (String key : props.stringPropertyNames()) {
+                s = replaceAll(s, key, props.getProperty(key));
+            }
+        }
+
         return s;
+    }
+
+    private static String replaceAll(String s, String key, String value) {
+        return s.replaceAll("\\Q${" + key + "}\\E", value);
     }
 
     private static ArtifactManager getArtifactManager(MavenProject project, MavenSession session)
