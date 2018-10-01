@@ -28,8 +28,8 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.sling.feature.io.ArtifactManager;
-import org.apache.sling.feature.io.ArtifactManagerConfig;
+import org.apache.sling.feature.io.file.ArtifactManager;
+import org.apache.sling.feature.io.file.ArtifactManagerConfig;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 
 import java.io.File;
