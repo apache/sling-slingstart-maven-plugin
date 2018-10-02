@@ -17,18 +17,24 @@
 package org.apache.sling.maven.slingstart;
 
 import org.apache.maven.MavenExecutionException;
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
-import org.apache.sling.feature.io.file.ArtifactManager;
-import org.apache.sling.feature.io.file.ArtifactManagerConfig;
+import org.apache.sling.feature.ArtifactId;
+import org.apache.sling.feature.Feature;
+import org.apache.sling.feature.builder.FeatureProvider;
+import org.apache.sling.feature.io.json.FeatureJSONReader;
 import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
 import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
 import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,31 +44,40 @@ import java.util.Properties;
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
 
-    public static void convert(MavenSession session, Environment env) throws MavenExecutionException {
-        Map<String, ProjectInfo> projs = env.modelProjects;
-        for (ProjectInfo pi : projs.values()) {
-            convert(session, pi.project);
+    public static Feature getFeature(ArtifactId id, MavenSession session, MavenProject project, ArtifactHandlerManager manager, ArtifactResolver resolver) {
+        try {
+            File file = ModelUtils.getArtifact(project, session, manager, resolver, id.getGroupId(), id.getArtifactId(), id.getVersion(), id.getType(), id.getClassifier()).getFile();
+            try (Reader reader = new InputStreamReader(new FileInputStream(file), "UTF-8")) {
+                return FeatureJSONReader.read(reader, file.toURI().toURL().toString());
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
     }
 
-    private static void convert(MavenSession session, MavenProject project) throws MavenExecutionException {
+    public static void convert(MavenSession session, Environment env) throws MavenExecutionException {
+        Map<String, ProjectInfo> projs = env.modelProjects;
+        for (ProjectInfo pi : projs.values()) {
+            convert(session, pi.project, env.artifactHandlerManager, env.resolver);
+        }
+    }
+
+    private static void convert(MavenSession session, MavenProject project, ArtifactHandlerManager manager, ArtifactResolver resolver) throws MavenExecutionException {
         File featuresDir = new File(project.getBasedir(), "src/main/features");
 
         File[] files = featuresDir.listFiles();
         if (files == null || files.length == 0)
             return;
 
-        ArtifactManager am;
         try {
-            am = getArtifactManager(project, session);
-        } catch (IOException ex) {
-            throw new MavenExecutionException("Unable to obtain artifactManager", ex);
+            convert(files, project, id -> getFeature(id, session, project, manager, resolver));
+        } catch (RuntimeException ex) {
+            throw new MavenExecutionException(ex.getMessage(), ex);
         }
 
-        convert(files, project, am);
     }
 
-    static void convert(File[] files, MavenProject project, ArtifactManager am) throws MavenExecutionException {
+    static void convert(File[] files, MavenProject project, FeatureProvider fp) throws MavenExecutionException {
         File processedFeaturesDir = new File(project.getBuild().getDirectory(), "features/processed");
         processedFeaturesDir.mkdirs();
 
@@ -88,7 +103,7 @@ public class FeatureModelConverter {
                     continue;
                 }
                 File genFile = new File(targetDir, f.getName() + ".txt");
-                FeatureToProvisioning.convert(f, genFile, am, substedFiles.toArray(new File[] {}));
+                FeatureToProvisioning.convert(f, genFile, fp, substedFiles.toArray(new File[] {}));
             }
         } catch (Exception e) {
             throw new MavenExecutionException("Cannot convert feature files to provisioning model", e);
@@ -131,18 +146,5 @@ public class FeatureModelConverter {
 
     private static String replaceAll(String s, String key, String value) {
         return s.replaceAll("\\Q${" + key + "}\\E", value);
-    }
-
-    private static ArtifactManager getArtifactManager(MavenProject project, MavenSession session)
-            throws IOException {
-        List<String> repos = new ArrayList<>();
-        repos.add(session.getLocalRepository().getUrl());
-        for (ArtifactRepository ar : project.getRemoteArtifactRepositories()) {
-            repos.add(ar.getUrl());
-        }
-
-        final ArtifactManagerConfig amConfig = new ArtifactManagerConfig();
-        amConfig.setRepositoryUrls(repos.toArray(new String[] {}));
-        return ArtifactManager.getArtifactManager(amConfig);
     }
 }

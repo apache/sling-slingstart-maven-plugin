@@ -18,24 +18,17 @@ package org.apache.sling.maven.slingstart;
 
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.sling.feature.io.file.ArtifactManager;
-import org.apache.sling.feature.io.file.ArtifactManagerConfig;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Mojo(
         name = "generate-resources",
@@ -66,29 +59,17 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
     protected MojoExecution mojoExecution;
 
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    public void execute() throws MojoExecutionException {
         File[] featureFiles = featuresDirectory.listFiles();
         if (featureFiles == null)
             return;
 
         try {
-            FeatureModelConverter.convert(featureFiles, project, getArtifactManager());
+            FeatureModelConverter.convert(featureFiles, project, id -> FeatureModelConverter.getFeature(id, mavenSession, project, artifactHandlerManager, resolver));
         } catch (MavenExecutionException e) {
             throw new MojoExecutionException("Cannot convert feature files to provisioning model.", e);
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             throw new MojoExecutionException("Problem obtaining artifact manager.", e);
         }
-    }
-
-    private ArtifactManager getArtifactManager() throws IOException {
-        List<String> repos = new ArrayList<>();
-        repos.add(mavenSession.getLocalRepository().getUrl());
-        for (ArtifactRepository ar : project.getRemoteArtifactRepositories()) {
-            repos.add(ar.getUrl());
-        }
-
-        final ArtifactManagerConfig amConfig = new ArtifactManagerConfig();
-        amConfig.setRepositoryUrls(repos.toArray(new String[] {}));
-        return ArtifactManager.getArtifactManager(amConfig);
     }
 }
