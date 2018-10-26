@@ -82,6 +82,7 @@ public class FeatureModelConverterTest {
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
+        Mockito.when(proj.getVersion()).thenReturn("1.0");
 
         ProjectInfo pi = new ProjectInfo();
         pi.project = proj;
@@ -115,6 +116,7 @@ public class FeatureModelConverterTest {
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getGroupId()).thenReturn("generated");
+        Mockito.when(proj.getVersion()).thenReturn("0.0.1-SNAPSHOT");
 
         ProjectInfo pi = new ProjectInfo();
         pi.project = proj;
@@ -151,6 +153,8 @@ public class FeatureModelConverterTest {
                 "xxx${project.groupId}yyy"));
         assertEquals("xxxabcyyya.b.c1.2.3-SNAPSHOT", FeatureModelConverter.replaceVars(mp,
                 "xxx${project.groupId}yyy${project.artifactId}${project.version}"));
+        assertEquals("xxxabcyyya.b.c1.2.3.SNAPSHOT", FeatureModelConverter.replaceVars(mp,
+                "xxx${project.groupId}yyy${project.artifactId}${project.osgiVersion}"));
         assertEquals("xxxbaryyy", FeatureModelConverter.replaceVars(mp, "xxx${foo}yyy"));
     }
 }

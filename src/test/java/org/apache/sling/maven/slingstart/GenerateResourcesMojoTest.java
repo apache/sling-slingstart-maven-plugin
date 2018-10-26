@@ -16,14 +16,6 @@
  */
 package org.apache.sling.maven.slingstart;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URL;
-
 import com.google.common.io.Files;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -34,6 +26,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URL;
+
+import static org.junit.Assert.assertTrue;
 
 public class GenerateResourcesMojoTest {
     private File tempDir;
@@ -70,6 +70,7 @@ public class GenerateResourcesMojoTest {
 
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBuild()).thenReturn(build);
+        Mockito.when(proj.getVersion()).thenReturn("1");
 
         File f = new File(System.getProperty("user.home") + "/.m2");
         ArtifactRepository localRepo = Mockito.mock(ArtifactRepository.class);

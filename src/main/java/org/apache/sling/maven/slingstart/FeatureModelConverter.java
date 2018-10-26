@@ -19,8 +19,11 @@ package org.apache.sling.maven.slingstart;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.osgi.DefaultMaven2OsgiConverter;
+import org.apache.maven.shared.osgi.Maven2OsgiConverter;
 import org.apache.sling.feature.ArtifactId;
 import org.apache.sling.feature.Feature;
 import org.apache.sling.feature.builder.FeatureProvider;
@@ -132,6 +135,7 @@ public class FeatureModelConverter {
         s = replaceAll(s, "project.groupId", project.getGroupId());
         s = replaceAll(s, "project.artifactId", project.getArtifactId());
         s = replaceAll(s, "project.version", project.getVersion());
+        s = replaceAll(s, "project.osgiVersion", getOSGiVersion(project.getVersion()));
 
 
         Properties props = project.getProperties();
@@ -146,5 +150,49 @@ public class FeatureModelConverter {
 
     private static String replaceAll(String s, String key, String value) {
         return s.replaceAll("\\Q${" + key + "}\\E", value);
+    }
+
+    /**
+     * Remove leading zeros for a version part
+     */
+    private static String cleanVersionString(final String version) {
+        final StringBuilder sb = new StringBuilder();
+        boolean afterDot = false;
+        for(int i=0;i<version.length(); i++) {
+            final char c = version.charAt(i);
+            if ( c == '.' ) {
+                if (afterDot == true ) {
+                    sb.append('0');
+                }
+                afterDot = true;
+                sb.append(c);
+            } else if ( afterDot && c == '0' ) {
+                // skip
+            } else if ( afterDot && c == '-' ) {
+                sb.append('0');
+                sb.append(c);
+                afterDot = false;
+            } else {
+                afterDot = false;
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String getOSGiVersion(final String version) {
+        final DefaultArtifactVersion dav = new DefaultArtifactVersion(cleanVersionString(version));
+        final StringBuilder sb = new StringBuilder();
+        sb.append(dav.getMajorVersion());
+        sb.append('.');
+        sb.append(dav.getMinorVersion());
+        sb.append('.');
+        sb.append(dav.getIncrementalVersion());
+        if ( dav.getQualifier() != null ) {
+            sb.append('.');
+            sb.append(dav.getQualifier());
+        }
+        final Maven2OsgiConverter converter = new DefaultMaven2OsgiConverter();
+        return converter.getVersion(sb.toString());
     }
 }
