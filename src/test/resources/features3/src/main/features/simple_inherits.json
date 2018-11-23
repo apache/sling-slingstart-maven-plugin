@@ -1,6 +1,6 @@
 {
   "id":"${project.groupId}:simple-inherits:1.0.0",
-  "include":
+  "prototype":
        {
            "id": "generated:simple:1.0.0"
        }
