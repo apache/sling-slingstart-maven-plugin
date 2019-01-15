@@ -5,3 +5,5 @@
 # Apache Sling SlingStart Maven Plugin
 
 This module is part of the [Apache Sling](https://sling.apache.org) project.
+
+[Plugin documentation](https://sling.apache.org/components/slingstart-maven-plugin/)
