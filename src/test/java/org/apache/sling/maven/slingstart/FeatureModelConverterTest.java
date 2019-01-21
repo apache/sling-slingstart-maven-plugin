@@ -157,4 +157,22 @@ public class FeatureModelConverterTest {
                 "xxx${project.groupId}yyy${project.artifactId}${project.osgiVersion}"));
         assertEquals("xxxbaryyy", FeatureModelConverter.replaceVars(mp, "xxx${foo}yyy"));
     }
+
+    @Test
+    public void testReplaceVarsFromSystemProperties() {
+        Properties storedProps = new Properties();
+        storedProps.putAll(System.getProperties());
+
+        try {
+            System.setProperty("blah", "hello");
+
+            MavenProject mp = Mockito.mock(MavenProject.class);
+            Mockito.when(mp.getVersion()).thenReturn("1");
+            assertEquals("hello hello ${blaaah}", FeatureModelConverter.replaceVars(mp,
+                    "${blah} ${blah} ${blaaah}"));
+        } finally {
+            // Restore the system properties
+            System.setProperties(storedProps);
+        }
+    }
 }

@@ -137,14 +137,18 @@ public class FeatureModelConverter {
         s = replaceAll(s, "project.version", project.getVersion());
         s = replaceAll(s, "project.osgiVersion", getOSGiVersion(project.getVersion()));
 
+        s = replaceProperties(System.getProperties(), s);
+        s = replaceProperties(project.getProperties(), s);
 
-        Properties props = project.getProperties();
+        return s;
+    }
+
+    private static String replaceProperties(Properties props, String s) {
         if (props != null) {
             for (String key : props.stringPropertyNames()) {
                 s = replaceAll(s, key, props.getProperty(key));
             }
         }
-
         return s;
     }
 
