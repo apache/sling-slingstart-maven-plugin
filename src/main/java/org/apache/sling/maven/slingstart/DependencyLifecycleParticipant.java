@@ -16,10 +16,12 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.AbstractMavenLifecycleParticipant;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
@@ -91,6 +93,12 @@ public class DependencyLifecycleParticipant extends AbstractMavenLifecyclePartic
                     info.plugin = plugin;
                     info.project = project;
                     env.modelProjects.put(project.getGroupId() + ":" + project.getArtifactId(), info);
+                    File processed = new File(project.getBuild().getDirectory(), "features/processed");
+                    try {
+                        FileUtils.forceDelete(processed);
+                    } catch (IOException e) {
+                        throw new MavenExecutionException("Failed to delete: " + processed.getPath(), e);
+                    }
                 } else {
                     logger.debug("Skipping project " + project + " leveraging " + PLUGIN_ID +" in another version "+ project.getVersion() + ".");
                 }
