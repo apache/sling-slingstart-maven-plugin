@@ -95,7 +95,9 @@ public class DependencyLifecycleParticipant extends AbstractMavenLifecyclePartic
                     env.modelProjects.put(project.getGroupId() + ":" + project.getArtifactId(), info);
                     File processed = new File(project.getBuild().getDirectory(), "features/processed");
                     try {
-                        FileUtils.forceDelete(processed);
+                        if ( processed.exists() ) {
+                            FileUtils.forceDelete(processed);
+                        }
                     } catch (IOException e) {
                         throw new MavenExecutionException("Failed to delete: " + processed.getPath(), e);
                     }
