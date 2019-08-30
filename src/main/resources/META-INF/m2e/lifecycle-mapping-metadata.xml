@@ -23,6 +23,7 @@
                 <goals>
                     <goal>attach-slingfeature</goal>
                     <goal>attach-modelarchive</goal>
+                    <goal>attach-dependencies-pom</goal>
                     <goal>repository</goal>
                     <goal>package</goal>
                     <goal>prepare-package</goal>

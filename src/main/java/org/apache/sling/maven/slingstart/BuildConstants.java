@@ -57,6 +57,8 @@ public abstract class BuildConstants {
     public static final String CLASSIFIER_WEBAPP = "webapp";
 
     public static final String CLASSIFIER_MAR = ModelArchiveWriter.DEFAULT_EXTENSION;
+    
+    public static final String CLASSIFIER_DEPENDENCIES = "dependencies";
 
     // Manifest attributes
 

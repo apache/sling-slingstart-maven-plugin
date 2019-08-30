@@ -55,6 +55,7 @@
               <test>org.apache.maven.plugins:maven-surefire-plugin:test</test>
               <prepare-package>org.apache.sling:slingstart-maven-plugin:prepare-package</prepare-package>              
               <package>
+                  org.apache.sling:slingstart-maven-plugin:attach-dependencies-pom,
                   org.apache.sling:slingstart-maven-plugin:attach-slingfeature,
                   org.apache.sling:slingstart-maven-plugin:package
               </package>
