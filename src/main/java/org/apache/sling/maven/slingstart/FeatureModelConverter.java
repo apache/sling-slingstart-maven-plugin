@@ -16,22 +16,6 @@
  */
 package org.apache.sling.maven.slingstart;
 
-import org.apache.maven.MavenExecutionException;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.osgi.DefaultMaven2OsgiConverter;
-import org.apache.maven.shared.osgi.Maven2OsgiConverter;
-import org.apache.sling.feature.ArtifactId;
-import org.apache.sling.feature.Feature;
-import org.apache.sling.feature.builder.FeatureProvider;
-import org.apache.sling.feature.io.json.FeatureJSONReader;
-import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
-import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
-import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -43,6 +27,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import org.apache.maven.MavenExecutionException;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.project.MavenProject;
+import org.apache.sling.feature.ArtifactId;
+import org.apache.sling.feature.Feature;
+import org.apache.sling.feature.builder.FeatureProvider;
+import org.apache.sling.feature.io.json.FeatureJSONReader;
+import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
+import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
+import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
+
+import aQute.bnd.version.MavenVersion;
 
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
@@ -196,7 +196,7 @@ public class FeatureModelConverter {
             sb.append('.');
             sb.append(dav.getQualifier());
         }
-        final Maven2OsgiConverter converter = new DefaultMaven2OsgiConverter();
-        return converter.getVersion(sb.toString());
+        final MavenVersion mavenVersion = new MavenVersion(sb.toString());
+        return mavenVersion.getOSGiVersion().toString();
     }
 }
