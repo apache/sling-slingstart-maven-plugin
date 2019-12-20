@@ -16,7 +16,13 @@
  */
 package org.apache.sling.maven.slingstart;
 
-import com.google.common.io.Files;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URL;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
@@ -27,13 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URL;
-
-import static org.junit.Assert.assertTrue;
+import com.google.common.io.Files;
 
 public class GenerateResourcesMojoTest {
     private File tempDir;
@@ -72,7 +72,7 @@ public class GenerateResourcesMojoTest {
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getVersion()).thenReturn("1");
 
-        File f = new File(System.getProperty("user.home") + "/.m2");
+        File f = new File(System.getProperty("user.home") + File.separatorChar + ".m2");
         ArtifactRepository localRepo = Mockito.mock(ArtifactRepository.class);
         Mockito.when(localRepo.getUrl()).thenReturn(f.toURI().toURL().toString());
 
@@ -80,13 +80,13 @@ public class GenerateResourcesMojoTest {
         Mockito.when(session.getLocalRepository()).thenReturn(localRepo);
 
         GenerateResourcesMojo grm = new GenerateResourcesMojo();
-        setPrivateField(grm, "featuresDirectory", featureDir);
+        setPrivateField(grm, "featuresDirectory", featureDir.getAbsolutePath());
         setPrivateField(AbstractSlingStartMojo.class, grm, "project", proj);
         setPrivateField(AbstractSlingStartMojo.class, grm, "mavenSession", session);
 
         grm.execute();
 
-        File expectedFile = new File(tempDir, FeatureModelConverter.BUILD_DIR + "/simple.json.txt");
+        File expectedFile = new File(tempDir, FeatureModelConverter.BUILD_DIR + File.separatorChar + "simple.json.txt");
         assertTrue(expectedFile.exists());
         assertTrue(expectedFile.length() > 0);
     }

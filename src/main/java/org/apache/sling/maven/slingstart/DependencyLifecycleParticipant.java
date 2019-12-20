@@ -106,8 +106,7 @@ public class DependencyLifecycleParticipant extends AbstractMavenLifecyclePartic
                 }
             }
         }
-
-        FeatureModelConverter.convert(session, env);
+        FeatureModelConverter.convert(env);
         new ModelPreprocessor().addDependencies(env);
     }
 

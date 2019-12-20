@@ -16,6 +16,17 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.util.Properties;
+
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Build;
@@ -26,17 +37,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.util.Properties;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class FeatureModelConverterTest {
     private File tempDir;
@@ -65,7 +65,7 @@ public class FeatureModelConverterTest {
 
     @Test
     public void testConvert() throws Exception {
-        File f = new File(System.getProperty("user.home") + "/.m2");
+        File f = new File(System.getProperty("user.home") + File.separatorChar + ".m2");
         ArtifactRepository localRepo = Mockito.mock(ArtifactRepository.class);
         Mockito.when(localRepo.getUrl()).thenReturn(f.toURI().toURL().toString());
 
@@ -89,17 +89,19 @@ public class FeatureModelConverterTest {
 
         Environment env = new Environment();
         env.modelProjects.put("xyz", pi);
+        env.session = session;
 
-        FeatureModelConverter.convert(session, env);
+        FeatureModelConverter.convert(env);
 
-        File expectedFile = new File(tempDir, "/provisioning/converted/boot_gav.json.txt");
+        File expectedFile = new File(tempDir,
+                "provisioning" + File.separatorChar + "converted" + File.separatorChar + "boot_gav.json.txt");
         assertTrue(expectedFile.exists());
         assertTrue(expectedFile.length() > 0);
     }
 
     @Test
     public void testConvertWithIncludes() throws Exception {
-        File f = new File(System.getProperty("user.home") + "/.m2");
+        File f = new File(System.getProperty("user.home") + File.separatorChar + ".m2");
         ArtifactRepository localRepo = Mockito.mock(ArtifactRepository.class);
         Mockito.when(localRepo.getUrl()).thenReturn(f.toURI().toURL().toString());
 
@@ -123,15 +125,18 @@ public class FeatureModelConverterTest {
 
         Environment env = new Environment();
         env.modelProjects.put("xyz", pi);
+        env.session = session;
 
-        FeatureModelConverter.convert(session, env);
+        FeatureModelConverter.convert(env);
 
-        File simpleProvFile = new File(tempDir, "/provisioning/converted/simple.json.txt");
+        File simpleProvFile = new File(tempDir,
+                "provisioning" + File.separatorChar + "converted" + File.separatorChar + "simple.json.txt");
         String simpleProv = new String(Files.readAllBytes(simpleProvFile.toPath()));
         assertTrue(simpleProv.contains("org.apache.aries/org.apache.aries.util/1.1.3"));
         assertFalse(simpleProv.contains("org.apache.sling/org.apache.sling.commons.log/5.1.0"));
 
-        File inheritsProvFile = new File(tempDir, "/provisioning/converted/simple_inherits.json.txt");
+        File inheritsProvFile = new File(tempDir,
+                "provisioning" + File.separatorChar + "converted" + File.separatorChar + "simple_inherits.json.txt");
         String inheritsProv = new String(Files.readAllBytes(inheritsProvFile.toPath()));
         assertTrue(inheritsProv.contains("org.apache.aries/org.apache.aries.util/1.1.3"));
         assertTrue(inheritsProv.contains("org.apache.sling/org.apache.sling.commons.log/5.1.0"));

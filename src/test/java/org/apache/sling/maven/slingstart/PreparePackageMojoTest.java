@@ -16,6 +16,9 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -50,9 +53,6 @@ import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
 public class PreparePackageMojoTest {
     @Test
     public void testBSNRenaming() throws Exception {
@@ -74,7 +74,7 @@ public class PreparePackageMojoTest {
             ppm.execute(model);
 
             File orgJar = getMavenArtifactFile(getMavenRepoRoot(), "org.apache.sling", "org.apache.sling.commons.johnzon", "1.0.0");
-            File generatedJar = new File(ppm.getTmpDir() + "/r-foo.bar.renamed.sling.commons.johnzon-1.0.0.jar");
+            File generatedJar = new File(ppm.getTmpDir(), "r-foo.bar.renamed.sling.commons.johnzon-1.0.0.jar");
 
             compareJarContents(orgJar, generatedJar);
 
@@ -171,7 +171,7 @@ public class PreparePackageMojoTest {
             Model model = ModelReader.read(new StringReader(modelTxt), null);
             ppm.execute(model);
 
-            File generatedFile = new File(ppm.getTmpDir() + "/test1.subsystem-base");
+            File generatedFile = new File(ppm.getTmpDir(), "test1.subsystem-base");
             try (JarFile jf = new JarFile(generatedFile)) {
                 // Test META-INF/MANIFEST.MF
                 Manifest mf = jf.getManifest();
@@ -286,7 +286,8 @@ public class PreparePackageMojoTest {
     }
 
     private File getMavenArtifactFile(File repoRoot, String gid, String aid, String ver) {
-        return new File(repoRoot, gid.replace('.', '/') + '/' + aid + '/' + ver + '/' + aid + '-' + ver + ".jar");
+        return new File(repoRoot, gid.replace('.', File.separatorChar) + File.separatorChar + aid + File.separatorChar
+                + ver + File.separatorChar + aid + '-' + ver + ".jar");
     }
 
     private File getMavenRepoRoot() throws IOException {

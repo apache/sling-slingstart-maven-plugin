@@ -16,6 +16,9 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import java.io.File;
+import java.util.List;
+
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -28,16 +31,15 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 
-import java.io.File;
-
 @Mojo(
         name = "generate-resources",
         defaultPhase = LifecyclePhase.GENERATE_RESOURCES,
         requiresDependencyResolution = ResolutionScope.TEST,
         threadSafe = true)
 public class GenerateResourcesMojo extends AbstractSlingStartMojo {
-    @Parameter(defaultValue="${basedir}/src/main/features")
-    private File featuresDirectory;
+    /** Comma separated list of directories. */
+    @Parameter(defaultValue = "src/main/features")
+    private String featuresDirectory;
 
     /**
      * To look up Archiver/UnArchiver implementations
@@ -60,12 +62,15 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
 
     @Override
     public void execute() throws MojoExecutionException {
-        File[] featureFiles = featuresDirectory.listFiles();
+        final List<File> featureFiles = FeatureModelConverter.getFeatureFiles(this.project.getBasedir(),
+                this.featuresDirectory);
         if (featureFiles == null)
             return;
 
         try {
-            FeatureModelConverter.convert(featureFiles, project, id -> FeatureModelConverter.getFeature(id, mavenSession, project, artifactHandlerManager, resolver));
+            FeatureModelConverter.convert(featureFiles, project, id -> FeatureModelConverter.getFeature(id,
+                    mavenSession,
+                    project, artifactHandlerManager, resolver));
         } catch (MavenExecutionException e) {
             throw new MojoExecutionException("Cannot convert feature files to provisioning model.", e);
         } catch (RuntimeException e) {

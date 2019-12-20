@@ -16,6 +16,21 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.Artifact;
@@ -42,21 +57,6 @@ import org.apache.sling.provisioning.model.Traceable;
 import org.apache.sling.provisioning.model.io.ModelReader;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ModelPreprocessor {
 
@@ -439,12 +439,12 @@ public class ModelPreprocessor {
      * @param defaultValue Default value that is returned if parameter is not set
      * @return Parameter value or default value.
      */
-    private String nodeValue(final Plugin plugin, final String name, final String defaultValue) {
+    public static String nodeValue(final Plugin plugin, final String name, final String defaultValue) {
         final Xpp3Dom config = plugin == null ? null : (Xpp3Dom)plugin.getConfiguration();
         return nodeValue(config, name, defaultValue);
     }
 
-    private String nodeValue(final Xpp3Dom config, final String name, final String defaultValue) {
+    private static String nodeValue(final Xpp3Dom config, final String name, final String defaultValue) {
         final Xpp3Dom node = (config == null ? null : config.getChild(name));
         if (node != null) {
             return node.getValue();

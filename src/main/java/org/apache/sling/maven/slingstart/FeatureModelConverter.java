@@ -25,7 +25,6 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import org.apache.maven.MavenExecutionException;
@@ -58,38 +57,54 @@ public class FeatureModelConverter {
         }
     }
 
-    public static void convert(MavenSession session, Environment env) throws MavenExecutionException {
-        Map<String, ProjectInfo> projs = env.modelProjects;
-        for (ProjectInfo pi : projs.values()) {
-            convert(session, pi.project, env.artifactHandlerManager, env.resolver);
+    public static void convert(Environment env) throws MavenExecutionException {
+        for (ProjectInfo pi : env.modelProjects.values()) {
+            convert(env, pi);
         }
     }
 
-    private static void convert(MavenSession session, MavenProject project, ArtifactHandlerManager manager, ArtifactResolver resolver) throws MavenExecutionException {
-        File featuresDir = new File(project.getBasedir(), "src/main/features");
+    public static List<File> getFeatureFiles(final File baseDir, final String config) {
+        final List<File> files = new ArrayList<>();
+        for (final String cfg : config.split(",")) {
+            final File featuresDir = new File(baseDir, cfg.trim().replace('/', File.separatorChar));
+            final File[] children = featuresDir.listFiles();
+            if (children != null) {
+                for (final File f : children) {
+                    if (f.isFile() && f.getName().endsWith(".json")) {
+                        files.add(f);
+                    }
+                }
+            }
+        }
 
-        File[] files = featuresDir.listFiles();
-        if (files == null || files.length == 0)
+        if (files.isEmpty()) {
+            return null;
+        }
+        return files;
+    }
+
+    public static void convert(Environment env, ProjectInfo info) throws MavenExecutionException {
+        final String config = ModelPreprocessor.nodeValue(info.plugin, "featuresDirectory", "src/main/features");
+        final List<File> files = getFeatureFiles(info.project.getBasedir(), config);
+        if (files == null) {
             return;
+        }
 
         try {
-            convert(files, project, id -> getFeature(id, session, project, manager, resolver));
+            convert(files, info.project,
+                    id -> getFeature(id, env.session, info.project, env.artifactHandlerManager, env.resolver));
         } catch (RuntimeException ex) {
             throw new MavenExecutionException(ex.getMessage(), ex);
         }
 
     }
 
-    static void convert(File[] files, MavenProject project, FeatureProvider fp) throws MavenExecutionException {
+    static void convert(List<File> files, MavenProject project, FeatureProvider fp) throws MavenExecutionException {
         File processedFeaturesDir = new File(project.getBuild().getDirectory(), "features/processed");
         processedFeaturesDir.mkdirs();
 
         List<File> substedFiles = new ArrayList<>();
         for (File f : files) {
-            if (!f.getName().endsWith(".json")) {
-                continue;
-            }
-
             try {
                 substedFiles.add(substituteVars(project, f, processedFeaturesDir));
             } catch (IOException e) {
@@ -102,9 +117,6 @@ public class FeatureModelConverter {
 
         try {
             for (File f : substedFiles) {
-                if (!f.getName().endsWith(".json")) {
-                    continue;
-                }
                 File genFile = new File(targetDir, f.getName() + ".txt");
                 FeatureToProvisioning.convert(f, genFile, fp, substedFiles.toArray(new File[] {}));
             }
