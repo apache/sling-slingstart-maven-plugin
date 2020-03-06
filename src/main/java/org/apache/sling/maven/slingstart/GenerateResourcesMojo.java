@@ -16,9 +16,6 @@
  */
 package org.apache.sling.maven.slingstart;
 
-import java.io.File;
-import java.util.List;
-
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -37,7 +34,12 @@ import org.codehaus.plexus.archiver.manager.ArchiverManager;
         requiresDependencyResolution = ResolutionScope.TEST,
         threadSafe = true)
 public class GenerateResourcesMojo extends AbstractSlingStartMojo {
-    /** Comma separated list of directories. */
+    /**
+     * Comma separated list of directories. Each directory entry can be followed by
+     * the "|" character and a run mode. More run modes can be added using the same
+     * mechanism after the first run mode. These run modes are then used as
+     * additional run modes for the provisioning models.
+     */
     @Parameter(defaultValue = "src/main/features")
     private String featuresDirectory;
 
@@ -65,13 +67,8 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
 
     @Override
     public void execute() throws MojoExecutionException {
-        final List<File> featureFiles = FeatureModelConverter.getFeatureFiles(this.project.getBasedir(),
-                this.featuresDirectory);
-        if (featureFiles == null)
-            return;
-
         try {
-            FeatureModelConverter.convert(featureFiles, project, defaultProvisioningModelName,
+            FeatureModelConverter.convertDirectories(this.featuresDirectory, project, defaultProvisioningModelName,
                     id -> FeatureModelConverter.getFeature(id,
                     mavenSession,
                     project, artifactHandlerManager, resolver));

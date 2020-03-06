@@ -27,6 +27,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +58,9 @@ import aQute.bnd.version.MavenVersion;
 public class FeatureModelConverter {
     static final String BUILD_DIR = "provisioning/converted";
 
+    static final String PROVISIONING_MODEL_NAME_VARIABLE = "provisioning.model.name";
+    static final String PROVISIONING_RUNMODES = "provisioning.runmodes";
+
     public static Feature getFeature(ArtifactId id, MavenSession session, MavenProject project, ArtifactHandlerManager manager, ArtifactResolver resolver) {
         try {
             File file = ModelUtils.getArtifact(project, session, manager, resolver, id.getGroupId(), id.getArtifactId(), id.getVersion(), id.getType(), id.getClassifier()).getFile();
@@ -74,52 +78,69 @@ public class FeatureModelConverter {
         }
     }
 
-    public static List<File> getFeatureFiles(final File baseDir, final String config) {
-        final List<File> files = new ArrayList<>();
+    public static class FeatureFileEntry {
+        public File file;
+        public String runModes;
+    }
+
+    public static void convertDirectories(String featuresDirectory, MavenProject project, String defaultProvName,
+            FeatureProvider fp) throws MavenExecutionException {
+        final List<FeatureFileEntry> featureFiles = FeatureModelConverter.getFeatureFiles(project.getBasedir(),
+                featuresDirectory);
+        if (!featureFiles.isEmpty()) {
+            convert(featureFiles, project, defaultProvName, fp);
+        }
+    }
+
+    private static List<FeatureFileEntry> getFeatureFiles(final File baseDir, final String config) {
+        final List<FeatureFileEntry> files = new ArrayList<>();
         for (final String cfg : config.split(",")) {
-            final File featuresDir = new File(baseDir, cfg.trim().replace('/', File.separatorChar));
+            final String[] directoryCfg = cfg.split("\\|");
+            final String directory = directoryCfg[0].trim().replace('/', File.separatorChar);
+
+            String runmodes = null;
+            if (directoryCfg.length > 1) {
+                runmodes = String.join(",", Arrays.copyOfRange(directoryCfg, 1, directoryCfg.length));
+            }
+            final File featuresDir = new File(baseDir, directory);
             final File[] children = featuresDir.listFiles();
             if (children != null) {
                 for (final File f : children) {
                     if (f.isFile() && f.getName().endsWith(".json")) {
-                        files.add(f);
+                        final FeatureFileEntry ff = new FeatureFileEntry();
+                        ff.file = f;
+                        ff.runModes = runmodes;
+                        files.add(ff);
                     }
                 }
             }
         }
 
-        if (files.isEmpty()) {
-            return null;
-        }
         return files;
     }
 
     public static void convert(Environment env, ProjectInfo info, String defaultProvName)
             throws MavenExecutionException {
         final String config = ModelPreprocessor.nodeValue(info.plugin, "featuresDirectory", "src/main/features");
-        final List<File> files = getFeatureFiles(info.project.getBasedir(), config);
-        if (files == null) {
-            return;
+        final List<FeatureFileEntry> files = getFeatureFiles(info.project.getBasedir(), config);
+        if (!files.isEmpty()) {
+            try {
+                convert(files, info.project, defaultProvName,
+                        id -> getFeature(id, env.session, info.project, env.artifactHandlerManager, env.resolver));
+            } catch (RuntimeException ex) {
+                throw new MavenExecutionException(ex.getMessage(), ex);
+            }
         }
-
-        try {
-            convert(files, info.project, defaultProvName,
-                    id -> getFeature(id, env.session, info.project, env.artifactHandlerManager, env.resolver));
-        } catch (RuntimeException ex) {
-            throw new MavenExecutionException(ex.getMessage(), ex);
-        }
-
     }
 
-    static final String PROVISIONING_MODEL_NAME_VARIABLE = "provisioning.model.name";
-
-    static void convert(List<File> files, MavenProject project, String defaultProvName, FeatureProvider fp)
+    static void convert(List<FeatureFileEntry> files, MavenProject project, String defaultProvName, FeatureProvider fp)
             throws MavenExecutionException {
         File processedFeaturesDir = new File(project.getBuild().getDirectory(), "features/processed");
         processedFeaturesDir.mkdirs();
 
         List<File> substedFiles = new ArrayList<>();
-        for (File f : files) {
+        for (FeatureFileEntry featureFile : files) {
+            final File f = featureFile.file;
             File outFile = new File(processedFeaturesDir, f.getName());
             if (!outFile.exists() || outFile.lastModified() <= f.lastModified()) {
                 try {
@@ -133,11 +154,28 @@ public class FeatureModelConverter {
                     String json = readFeatureFile(project, f, suggestedClassifier);
 
                     // check for prov model name
-                    if (defaultProvName != null) {
+                    if (defaultProvName != null || featureFile.runModes != null) {
                         try (final Reader reader = new StringReader(json)) {
                             final Feature feature = FeatureJSONReader.read(reader, f.getAbsolutePath());
-                            if (feature.getVariables().get(PROVISIONING_MODEL_NAME_VARIABLE) == null) {
+                            boolean update = false;
+                            if (featureFile.runModes != null) {
+                                String oldValue = feature.getVariables().get(PROVISIONING_RUNMODES);
+                                String newValue;
+                                if (oldValue == null) {
+                                    newValue = featureFile.runModes;
+                                } else {
+                                    newValue = oldValue.concat(",").concat(featureFile.runModes);
+                                }
+                                feature.getVariables().put(PROVISIONING_RUNMODES, newValue);
+                                update = true;
+                            }
+
+                            if (defaultProvName != null
+                                    && feature.getVariables().get(PROVISIONING_MODEL_NAME_VARIABLE) == null) {
                                 feature.getVariables().put(PROVISIONING_MODEL_NAME_VARIABLE, defaultProvName);
+                                update = true;
+                            }
+                            if (update) {
                                 try (final Writer writer = new StringWriter()) {
                                     FeatureJSONWriter.write(writer, feature);
                                     writer.flush();
