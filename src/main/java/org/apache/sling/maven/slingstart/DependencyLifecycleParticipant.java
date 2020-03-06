@@ -92,6 +92,8 @@ public class DependencyLifecycleParticipant extends AbstractMavenLifecyclePartic
                     final ProjectInfo info = new ProjectInfo();
                     info.plugin = plugin;
                     info.project = project;
+                    info.defaultProvisioningModelName = ModelPreprocessor.nodeValue(plugin,
+                            "defaultProvisioningModelName", null);
                     env.modelProjects.put(project.getGroupId() + ":" + project.getArtifactId(), info);
                     File processed = new File(project.getBuild().getDirectory(), "features/processed");
                     try {

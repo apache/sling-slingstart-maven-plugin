@@ -41,6 +41,9 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
     @Parameter(defaultValue = "src/main/features")
     private String featuresDirectory;
 
+    @Parameter
+    private String defaultProvisioningModelName;
+
     /**
      * To look up Archiver/UnArchiver implementations
      */
@@ -68,7 +71,8 @@ public class GenerateResourcesMojo extends AbstractSlingStartMojo {
             return;
 
         try {
-            FeatureModelConverter.convert(featureFiles, project, id -> FeatureModelConverter.getFeature(id,
+            FeatureModelConverter.convert(featureFiles, project, defaultProvisioningModelName,
+                    id -> FeatureModelConverter.getFeature(id,
                     mavenSession,
                     project, artifactHandlerManager, resolver));
         } catch (MavenExecutionException e) {

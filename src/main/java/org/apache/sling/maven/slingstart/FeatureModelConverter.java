@@ -47,6 +47,7 @@ import org.apache.sling.feature.ArtifactId;
 import org.apache.sling.feature.Feature;
 import org.apache.sling.feature.builder.FeatureProvider;
 import org.apache.sling.feature.io.json.FeatureJSONReader;
+import org.apache.sling.feature.io.json.FeatureJSONWriter;
 import org.apache.sling.feature.modelconverter.FeatureToProvisioning;
 import org.apache.sling.maven.slingstart.ModelPreprocessor.Environment;
 import org.apache.sling.maven.slingstart.ModelPreprocessor.ProjectInfo;
@@ -69,7 +70,7 @@ public class FeatureModelConverter {
 
     public static void convert(Environment env) throws MavenExecutionException {
         for (ProjectInfo pi : env.modelProjects.values()) {
-            convert(env, pi);
+            convert(env, pi, pi.defaultProvisioningModelName);
         }
     }
 
@@ -93,7 +94,8 @@ public class FeatureModelConverter {
         return files;
     }
 
-    public static void convert(Environment env, ProjectInfo info) throws MavenExecutionException {
+    public static void convert(Environment env, ProjectInfo info, String defaultProvName)
+            throws MavenExecutionException {
         final String config = ModelPreprocessor.nodeValue(info.plugin, "featuresDirectory", "src/main/features");
         final List<File> files = getFeatureFiles(info.project.getBasedir(), config);
         if (files == null) {
@@ -101,7 +103,7 @@ public class FeatureModelConverter {
         }
 
         try {
-            convert(files, info.project,
+            convert(files, info.project, defaultProvName,
                     id -> getFeature(id, env.session, info.project, env.artifactHandlerManager, env.resolver));
         } catch (RuntimeException ex) {
             throw new MavenExecutionException(ex.getMessage(), ex);
@@ -109,7 +111,10 @@ public class FeatureModelConverter {
 
     }
 
-    static void convert(List<File> files, MavenProject project, FeatureProvider fp) throws MavenExecutionException {
+    static final String PROVISIONING_MODEL_NAME_VARIABLE = "provisioning.model.name";
+
+    static void convert(List<File> files, MavenProject project, String defaultProvName, FeatureProvider fp)
+            throws MavenExecutionException {
         File processedFeaturesDir = new File(project.getBuild().getDirectory(), "features/processed");
         processedFeaturesDir.mkdirs();
 
@@ -125,8 +130,22 @@ public class FeatureModelConverter {
                     } else {
                         suggestedClassifier = null;
                     }
-                    final String json = readFeatureFile(project, f, suggestedClassifier);
+                    String json = readFeatureFile(project, f, suggestedClassifier);
 
+                    // check for prov model name
+                    if (defaultProvName != null) {
+                        try (final Reader reader = new StringReader(json)) {
+                            final Feature feature = FeatureJSONReader.read(reader, f.getAbsolutePath());
+                            if (feature.getVariables().get(PROVISIONING_MODEL_NAME_VARIABLE) == null) {
+                                feature.getVariables().put(PROVISIONING_MODEL_NAME_VARIABLE, defaultProvName);
+                                try (final Writer writer = new StringWriter()) {
+                                    FeatureJSONWriter.write(writer, feature);
+                                    writer.flush();
+                                    json = writer.toString();
+                                }
+                            }
+                        }
+                    }
                     try (final Writer fileWriter = new FileWriter(outFile)) {
                         fileWriter.write(json);
                     }

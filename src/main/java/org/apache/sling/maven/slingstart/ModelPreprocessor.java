@@ -69,6 +69,7 @@ public class ModelPreprocessor {
         public Model        model;
         public boolean      extendMavenClassPath = true;
         public final Map<org.apache.sling.provisioning.model.Artifact, Model> includedModels = new HashMap<>();
+        public String defaultProvisioningModelName;
 
     }
 
