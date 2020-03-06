@@ -16,7 +16,6 @@
  */
 package org.apache.sling.maven.slingstart;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -83,6 +82,8 @@ public class FeatureModelConverterTest {
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getVersion()).thenReturn("1.0");
+        final Properties projProps = new Properties();
+        Mockito.when(proj.getProperties()).thenReturn(projProps);
 
         ProjectInfo pi = new ProjectInfo();
         pi.project = proj;
@@ -119,6 +120,8 @@ public class FeatureModelConverterTest {
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getGroupId()).thenReturn("generated");
         Mockito.when(proj.getVersion()).thenReturn("0.0.1-SNAPSHOT");
+        final Properties projProps = new Properties();
+        Mockito.when(proj.getProperties()).thenReturn(projProps);
 
         ProjectInfo pi = new ProjectInfo();
         pi.project = proj;
@@ -140,44 +143,5 @@ public class FeatureModelConverterTest {
         String inheritsProv = new String(Files.readAllBytes(inheritsProvFile.toPath()));
         assertTrue(inheritsProv.contains("org.apache.aries/org.apache.aries.util/1.1.3"));
         assertTrue(inheritsProv.contains("org.apache.sling/org.apache.sling.commons.log/5.1.0"));
-    }
-
-    @Test
-    public void testReplaceVars() {
-        MavenProject mp = Mockito.mock(MavenProject.class);
-
-        Properties props = new Properties();
-        props.put("foo", "bar");
-
-        Mockito.when(mp.getGroupId()).thenReturn("abc");
-        Mockito.when(mp.getArtifactId()).thenReturn("a.b.c");
-        Mockito.when(mp.getVersion()).thenReturn("1.2.3-SNAPSHOT");
-        Mockito.when(mp.getProperties()).thenReturn(props);
-
-        assertEquals("xxxabcyyy", FeatureModelConverter.replaceVars(mp,
-                "xxx${project.groupId}yyy"));
-        assertEquals("xxxabcyyya.b.c1.2.3-SNAPSHOT", FeatureModelConverter.replaceVars(mp,
-                "xxx${project.groupId}yyy${project.artifactId}${project.version}"));
-        assertEquals("xxxabcyyya.b.c1.2.3.SNAPSHOT", FeatureModelConverter.replaceVars(mp,
-                "xxx${project.groupId}yyy${project.artifactId}${project.osgiVersion}"));
-        assertEquals("xxxbaryyy", FeatureModelConverter.replaceVars(mp, "xxx${foo}yyy"));
-    }
-
-    @Test
-    public void testReplaceVarsFromSystemProperties() {
-        Properties storedProps = new Properties();
-        storedProps.putAll(System.getProperties());
-
-        try {
-            System.setProperty("blah", "hello");
-
-            MavenProject mp = Mockito.mock(MavenProject.class);
-            Mockito.when(mp.getVersion()).thenReturn("1");
-            assertEquals("hello hello ${blaaah}", FeatureModelConverter.replaceVars(mp,
-                    "${blah} ${blah} ${blaaah}"));
-        } finally {
-            // Restore the system properties
-            System.setProperties(storedProps);
-        }
     }
 }

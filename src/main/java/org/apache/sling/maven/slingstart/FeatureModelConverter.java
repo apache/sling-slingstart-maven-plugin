@@ -18,15 +18,25 @@ package org.apache.sling.maven.slingstart;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Files;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonValue;
+import javax.json.stream.JsonGenerator;
+
+import org.apache.felix.configurator.impl.json.JSMin;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -105,11 +115,26 @@ public class FeatureModelConverter {
 
         List<File> substedFiles = new ArrayList<>();
         for (File f : files) {
-            try {
-                substedFiles.add(substituteVars(project, f, processedFeaturesDir));
-            } catch (IOException e) {
-                throw new MavenExecutionException("Problem processing feature file " + f.getAbsolutePath(), e);
+            File outFile = new File(processedFeaturesDir, f.getName());
+            if (!outFile.exists() || outFile.lastModified() <= f.lastModified()) {
+                try {
+                    final String suggestedClassifier;
+                    if (!f.getName().equals("feature.json")) {
+                        final int lastDot = f.getName().lastIndexOf('.');
+                        suggestedClassifier = f.getName().substring(0, lastDot);
+                    } else {
+                        suggestedClassifier = null;
+                    }
+                    final String json = readFeatureFile(project, f, suggestedClassifier);
+
+                    try (final Writer fileWriter = new FileWriter(outFile)) {
+                        fileWriter.write(json);
+                    }
+                } catch (IOException e) {
+                    throw new MavenExecutionException("Problem processing feature file " + f.getAbsolutePath(), e);
+                }
             }
+            substedFiles.add(outFile);
         }
 
         File targetDir = new File(project.getBuild().getDirectory(), BUILD_DIR);
@@ -125,47 +150,74 @@ public class FeatureModelConverter {
         }
     }
 
-    private static File substituteVars(MavenProject project, File f, File processedFeaturesDir) throws IOException {
-        File file = new File(processedFeaturesDir, f.getName());
+    /**
+     * Read the json file, minify it, add id if missing and replace variables
+     *
+     * @param file The json file
+     * @return The read and minified JSON
+     */
+    public static String readFeatureFile(final MavenProject project, final File file,
+            final String suggestedClassifier) {
+        final StringBuilder sb = new StringBuilder();
+        try (final Reader reader = new FileReader(file)) {
+            final char[] buf = new char[4096];
+            int l = 0;
 
-        if (file.exists() && file.lastModified() > f.lastModified()) {
-            // The file already exists, so we don't need to write it again
-            return file;
+            while ((l = reader.read(buf)) > 0) {
+                sb.append(buf, 0, l);
+            }
+        } catch (final IOException io) {
+            throw new RuntimeException("Unable to read feature " + file.getAbsolutePath(), io);
+        }
+        final String readJson = sb.toString();
+
+        // minify JSON (remove comments)
+        String json;
+        try (final Writer out = new StringWriter(); final Reader in = new StringReader(readJson)) {
+            final JSMin min = new JSMin(in, out);
+            min.jsmin();
+            json = out.toString();
+        } catch (final IOException e) {
+            throw new RuntimeException("Unable to read feature file " + file.getAbsolutePath(), e);
         }
 
-        try (FileWriter fw = new FileWriter(file)) {
-            for (String s : Files.readAllLines(f.toPath())) {
-                fw.write(replaceVars(project, s));
-                fw.write(System.getProperty("line.separator"));
+        // check if "id" is set
+        try (final JsonReader reader = Json.createReader(new StringReader(json))) {
+            final JsonObject obj = reader.readObject();
+            if (!obj.containsKey("id")) {
+                final StringBuilder isb = new StringBuilder();
+                isb.append(project.getGroupId());
+                isb.append(':');
+                isb.append(project.getArtifactId());
+                isb.append(':');
+                isb.append("slingosgifeature");
+
+                if (suggestedClassifier != null) {
+                    isb.append(':');
+                    isb.append(suggestedClassifier);
+                }
+                isb.append(':');
+                isb.append(project.getVersion());
+
+                final StringWriter writer = new StringWriter();
+
+                try (final JsonGenerator generator = Json.createGenerator(writer)) {
+                    generator.writeStartObject();
+
+                    generator.write("id", isb.toString());
+
+                    for (final Map.Entry<String, JsonValue> entry : obj.entrySet()) {
+                        generator.write(entry.getKey(), entry.getValue());
+                    }
+                    generator.writeEnd();
+                }
+
+                json = writer.toString();
             }
         }
-        return file;
-    }
 
-    static String replaceVars(MavenProject project, String s) {
-        // There must be a better way than enumerating all these?
-        s = replaceAll(s, "project.groupId", project.getGroupId());
-        s = replaceAll(s, "project.artifactId", project.getArtifactId());
-        s = replaceAll(s, "project.version", project.getVersion());
-        s = replaceAll(s, "project.osgiVersion", getOSGiVersion(project.getVersion()));
-
-        s = replaceProperties(System.getProperties(), s);
-        s = replaceProperties(project.getProperties(), s);
-
-        return s;
-    }
-
-    private static String replaceProperties(Properties props, String s) {
-        if (props != null) {
-            for (String key : props.stringPropertyNames()) {
-                s = replaceAll(s, key, props.getProperty(key));
-            }
-        }
-        return s;
-    }
-
-    private static String replaceAll(String s, String key, String value) {
-        return s.replaceAll("\\Q${" + key + "}\\E", value);
+        // replace variables
+        return Substitution.replaceMavenVars(project, json);
     }
 
     /**

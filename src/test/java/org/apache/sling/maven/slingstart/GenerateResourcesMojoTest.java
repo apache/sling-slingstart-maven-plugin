@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.Properties;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
@@ -71,7 +72,8 @@ public class GenerateResourcesMojoTest {
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getVersion()).thenReturn("1");
-
+        final Properties projProps = new Properties();
+        Mockito.when(proj.getProperties()).thenReturn(projProps);
         File f = new File(System.getProperty("user.home") + File.separatorChar + ".m2");
         ArtifactRepository localRepo = Mockito.mock(ArtifactRepository.class);
         Mockito.when(localRepo.getUrl()).thenReturn(f.toURI().toURL().toString());
