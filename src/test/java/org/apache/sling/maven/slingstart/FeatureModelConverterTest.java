@@ -168,7 +168,7 @@ public class FeatureModelConverterTest {
         assertNull(featureFiles.get(0).model);
         assertNull(featureFiles.get(0).runModes);
 
-        assertEquals("quickstart", featureFiles.get(1).model, "quickstart");
+        assertEquals("quickstart", featureFiles.get(1).model);
         assertNull(featureFiles.get(1).runModes);
 
         assertEquals("quickstart", featureFiles.get(2).model);
