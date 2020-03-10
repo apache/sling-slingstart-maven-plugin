@@ -16,7 +16,9 @@
  */
 package org.apache.sling.maven.slingstart;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -24,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -143,5 +146,38 @@ public class FeatureModelConverterTest {
         String inheritsProv = new String(Files.readAllBytes(inheritsProvFile.toPath()));
         assertTrue(inheritsProv.contains("org.apache.aries/org.apache.aries.util/1.1.3"));
         assertTrue(inheritsProv.contains("org.apache.sling/org.apache.sling.commons.log/5.1.0"));
+    }
+
+    @Test
+    public void testFeatureDirectoryDirectives() throws Exception {
+        List<FeatureModelConverter.FeatureFileEntry> featureFiles =
+            FeatureModelConverter.getFeatureFiles(new File(getClass().getResource("/features1").toURI()).getParentFile(),
+            "features1"
+                + "," + "features1"
+                + ";" + FeatureModelConverter.PROVISIONING_MODEL_NAME_VARIABLE + "=" + "quickstart"
+                + "," + "features1"
+                + ";" + FeatureModelConverter.PROVISIONING_MODEL_NAME_VARIABLE + "=" + "quickstart"
+                + ";" + FeatureModelConverter.PROVISIONING_RUNMODES + "=" + "author"
+                + "," + "features1"
+                + ";" + FeatureModelConverter.PROVISIONING_MODEL_NAME_VARIABLE + "=" + "samplecontent"
+                + "," + "features1"
+                + ";" + FeatureModelConverter.PROVISIONING_MODEL_NAME_VARIABLE + "=" + ":boot"
+                + ";" + FeatureModelConverter.PROVISIONING_RUNMODES + ":List<Integer>=" + "\"1,2,3\""
+        );
+
+        assertNull(featureFiles.get(0).model);
+        assertNull(featureFiles.get(0).runModes);
+
+        assertEquals("quickstart", featureFiles.get(1).model);
+        assertNull(featureFiles.get(1).runModes);
+
+        assertEquals("quickstart", featureFiles.get(2).model);
+        assertEquals("author", featureFiles.get(2).runModes);
+
+        assertEquals("samplecontent", featureFiles.get(3).model);
+        assertNull(featureFiles.get(3).runModes);
+
+        assertEquals(":boot", featureFiles.get(4).model);
+        assertEquals("1,2,3", featureFiles.get(4).runModes);
     }
 }

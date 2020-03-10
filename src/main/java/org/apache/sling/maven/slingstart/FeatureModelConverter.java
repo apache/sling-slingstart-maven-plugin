@@ -27,7 +27,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -81,6 +81,7 @@ public class FeatureModelConverter {
     public static class FeatureFileEntry {
         public File file;
         public String runModes;
+        public String model;
     }
 
     public static void convertDirectories(String featuresDirectory, MavenProject project, String defaultProvName,
@@ -92,16 +93,14 @@ public class FeatureModelConverter {
         }
     }
 
-    private static List<FeatureFileEntry> getFeatureFiles(final File baseDir, final String config) {
+    static List<FeatureFileEntry> getFeatureFiles(final File baseDir, final String config) {
         final List<FeatureFileEntry> files = new ArrayList<>();
-        for (final String cfg : config.split(",")) {
-            final String[] directoryCfg = cfg.split("\\|");
-            final String directory = directoryCfg[0].trim().replace('/', File.separatorChar);
+        for (final ParsedHeaderClause cfg : parseStandardHeader(config)) {
+            final String directory = cfg.m_paths.get(0).trim().replace('/', File.separatorChar);
 
-            String runmodes = null;
-            if (directoryCfg.length > 1) {
-                runmodes = String.join(",", Arrays.copyOfRange(directoryCfg, 1, directoryCfg.length));
-            }
+            String runmodes = (String) cfg.m_attrs.get(PROVISIONING_RUNMODES);
+            String model = (String) cfg.m_attrs.get(PROVISIONING_MODEL_NAME_VARIABLE);
+
             final File featuresDir = new File(baseDir, directory);
             final File[] children = featuresDir.listFiles();
             if (children != null) {
@@ -110,6 +109,7 @@ public class FeatureModelConverter {
                         final FeatureFileEntry ff = new FeatureFileEntry();
                         ff.file = f;
                         ff.runModes = runmodes;
+                        ff.model = model;
                         files.add(ff);
                     }
                 }
@@ -154,7 +154,7 @@ public class FeatureModelConverter {
                     String json = readFeatureFile(project, f, suggestedClassifier);
 
                     // check for prov model name
-                    if (defaultProvName != null || featureFile.runModes != null) {
+                    if (defaultProvName != null || featureFile.runModes != null || featureFile.model != null) {
                         try (final Reader reader = new StringReader(json)) {
                             final Feature feature = FeatureJSONReader.read(reader, f.getAbsolutePath());
                             boolean update = false;
@@ -170,11 +170,20 @@ public class FeatureModelConverter {
                                 update = true;
                             }
 
-                            if (defaultProvName != null
-                                    && feature.getVariables().get(PROVISIONING_MODEL_NAME_VARIABLE) == null) {
-                                feature.getVariables().put(PROVISIONING_MODEL_NAME_VARIABLE, defaultProvName);
-                                update = true;
+                            if (feature.getVariables().get(PROVISIONING_MODEL_NAME_VARIABLE) == null) {
+                                boolean updateInner = true;
+                                if (featureFile.model != null) {
+                                    feature.getVariables().put(PROVISIONING_MODEL_NAME_VARIABLE, featureFile.model);
+                                }
+                                else if (defaultProvName != null) {
+                                    feature.getVariables().put(PROVISIONING_MODEL_NAME_VARIABLE, defaultProvName);
+                                }
+                                else {
+                                    updateInner = update;
+                                }
+                                update = updateInner;
                             }
+
                             if (update) {
                                 try (final Writer writer = new StringWriter()) {
                                     FeatureJSONWriter.write(writer, feature);
@@ -319,5 +328,188 @@ public class FeatureModelConverter {
         }
         final MavenVersion mavenVersion = new MavenVersion(sb.toString());
         return mavenVersion.getOSGiVersion().toString();
+    }
+
+    private static class ParsedHeaderClause
+    {
+        public final List<String> m_paths;
+        public final Map<String, String> m_dirs;
+        public final Map<String, Object> m_attrs;
+        public final Map<String, String> m_types;
+
+        public ParsedHeaderClause(
+            List<String> paths, Map<String, String> dirs, Map<String, Object> attrs,
+            Map<String, String> types)
+        {
+            m_paths = paths;
+            m_dirs = dirs;
+            m_attrs = attrs;
+            m_types = types;
+        }
+    }
+
+    private static final char EOF = (char) -1;
+
+    private static char charAt(int pos, String headers, int length)
+    {
+        if (pos >= length)
+        {
+            return EOF;
+        }
+        return headers.charAt(pos);
+    }
+
+    private static final int CLAUSE_START = 0;
+    private static final int PARAMETER_START = 1;
+    private static final int KEY = 2;
+    private static final int DIRECTIVE_OR_TYPEDATTRIBUTE = 4;
+    private static final int ARGUMENT = 8;
+    private static final int VALUE = 16;
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static List<ParsedHeaderClause> parseStandardHeader(String header)
+    {
+        List<ParsedHeaderClause> clauses = new ArrayList<ParsedHeaderClause>();
+        if (header == null)
+        {
+            return clauses;
+        }
+        ParsedHeaderClause clause = null;
+        String key = null;
+        Map targetMap = null;
+        int state = CLAUSE_START;
+        int currentPosition = 0;
+        int startPosition = 0;
+        int length = header.length();
+        boolean quoted = false;
+        boolean escaped = false;
+
+        char currentChar = EOF;
+        do
+        {
+            currentChar = charAt(currentPosition, header, length);
+            switch (state)
+            {
+                case CLAUSE_START:
+                    clause = new ParsedHeaderClause(
+                        new ArrayList<String>(),
+                        new HashMap<String, String>(),
+                        new HashMap<String, Object>(),
+                        new HashMap<String, String>());
+                    clauses.add(clause);
+                    state = PARAMETER_START;
+                case PARAMETER_START:
+                    startPosition = currentPosition;
+                    state = KEY;
+                case KEY:
+                    switch (currentChar)
+                    {
+                        case ':':
+                        case '=':
+                            key = header.substring(startPosition, currentPosition).trim();
+                            startPosition = currentPosition + 1;
+                            targetMap = clause.m_attrs;
+                            state = currentChar == ':' ? DIRECTIVE_OR_TYPEDATTRIBUTE : ARGUMENT;
+                            break;
+                        case EOF:
+                        case ',':
+                        case ';':
+                            clause.m_paths.add(header.substring(startPosition, currentPosition).trim());
+                            state = currentChar == ',' ? CLAUSE_START : PARAMETER_START;
+                            break;
+                        default:
+                            break;
+                    }
+                    currentPosition++;
+                    break;
+                case DIRECTIVE_OR_TYPEDATTRIBUTE:
+                    switch(currentChar)
+                    {
+                        case '=':
+                            if (startPosition != currentPosition)
+                            {
+                                clause.m_types.put(key, header.substring(startPosition, currentPosition).trim());
+                            }
+                            else
+                            {
+                                targetMap = clause.m_dirs;
+                            }
+                            state = ARGUMENT;
+                            startPosition = currentPosition + 1;
+                            break;
+                        default:
+                            break;
+                    }
+                    currentPosition++;
+                    break;
+                case ARGUMENT:
+                    if (currentChar == '\"')
+                    {
+                        quoted = true;
+                        currentPosition++;
+                    }
+                    else
+                    {
+                        quoted = false;
+                    }
+                    if (!Character.isWhitespace(currentChar)) {
+                        state = VALUE;
+                    }
+                    else {
+                        currentPosition++;
+                    }
+                    break;
+                case VALUE:
+                    if (escaped)
+                    {
+                        escaped = false;
+                    }
+                    else
+                    {
+                        if (currentChar == '\\' )
+                        {
+                            escaped = true;
+                        }
+                        else if (quoted && currentChar == '\"')
+                        {
+                            quoted = false;
+                        }
+                        else if (!quoted)
+                        {
+                            String value = null;
+                            switch(currentChar)
+                            {
+                                case EOF:
+                                case ';':
+                                case ',':
+                                    value = header.substring(startPosition, currentPosition).trim();
+                                    if (value.startsWith("\"") && value.endsWith("\""))
+                                    {
+                                        value = value.substring(1, value.length() - 1);
+                                    }
+                                    if (targetMap.put(key, value) != null)
+                                    {
+                                        throw new IllegalArgumentException(
+                                            "Duplicate '" + key + "' in: " + header);
+                                    }
+                                    state = currentChar == ';' ? PARAMETER_START : CLAUSE_START;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    currentPosition++;
+                    break;
+                default:
+                    break;
+            }
+        } while ( currentChar != EOF);
+
+        if (state > PARAMETER_START)
+        {
+            throw new IllegalArgumentException("Unable to parse header: " + header);
+        }
+        return clauses;
     }
 }
