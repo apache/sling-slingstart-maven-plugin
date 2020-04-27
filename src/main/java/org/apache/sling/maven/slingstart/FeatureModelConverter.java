@@ -31,13 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
-import javax.json.stream.JsonGenerator;
-
-import org.apache.felix.configurator.impl.json.JSMin;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -224,66 +217,16 @@ public class FeatureModelConverter {
      */
     public static String readFeatureFile(final MavenProject project, final File file,
             final String suggestedClassifier) {
-        final StringBuilder sb = new StringBuilder();
-        try (final Reader reader = new FileReader(file)) {
-            final char[] buf = new char[4096];
-            int l = 0;
-
-            while ((l = reader.read(buf)) > 0) {
-                sb.append(buf, 0, l);
-            }
-        } catch (final IOException io) {
-            throw new RuntimeException("Unable to read feature " + file.getAbsolutePath(), io);
-        }
-        final String readJson = sb.toString();
-
-        // minify JSON (remove comments)
-        String json;
-        try (final Writer out = new StringWriter(); final Reader in = new StringReader(readJson)) {
-            final JSMin min = new JSMin(in, out);
-            min.jsmin();
-            json = out.toString();
+        final ArtifactId fileId = new ArtifactId(project.getGroupId(),
+                project.getArtifactId(),
+                project.getVersion(),
+                suggestedClassifier,
+                "slingosgifeature");
+        try ( final Reader reader = new FileReader(file) ) {
+            return Substitution.replaceMavenVars(project, JSONFeatures.read(reader, fileId, file.getAbsolutePath()));
         } catch (final IOException e) {
-            throw new RuntimeException("Unable to read feature file " + file.getAbsolutePath(), e);
+            throw new RuntimeException("Unable to read feature file " + file.getAbsolutePath() + " : " + e.getMessage(), e);
         }
-
-        // check if "id" is set
-        try (final JsonReader reader = Json.createReader(new StringReader(json))) {
-            final JsonObject obj = reader.readObject();
-            if (!obj.containsKey("id")) {
-                final StringBuilder isb = new StringBuilder();
-                isb.append(project.getGroupId());
-                isb.append(':');
-                isb.append(project.getArtifactId());
-                isb.append(':');
-                isb.append("slingosgifeature");
-
-                if (suggestedClassifier != null) {
-                    isb.append(':');
-                    isb.append(suggestedClassifier);
-                }
-                isb.append(':');
-                isb.append(project.getVersion());
-
-                final StringWriter writer = new StringWriter();
-
-                try (final JsonGenerator generator = Json.createGenerator(writer)) {
-                    generator.writeStartObject();
-
-                    generator.write("id", isb.toString());
-
-                    for (final Map.Entry<String, JsonValue> entry : obj.entrySet()) {
-                        generator.write(entry.getKey(), entry.getValue());
-                    }
-                    generator.writeEnd();
-                }
-
-                json = writer.toString();
-            }
-        }
-
-        // replace variables
-        return Substitution.replaceMavenVars(project, json);
     }
 
     /**

@@ -71,6 +71,8 @@ public class GenerateResourcesMojoTest {
 
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBuild()).thenReturn(build);
+        Mockito.when(proj.getGroupId()).thenReturn("g");
+        Mockito.when(proj.getArtifactId()).thenReturn("a");
         Mockito.when(proj.getVersion()).thenReturn("1");
         final Properties projProps = new Properties();
         Mockito.when(proj.getProperties()).thenReturn(projProps);

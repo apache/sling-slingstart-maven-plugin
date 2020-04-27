@@ -84,6 +84,8 @@ public class FeatureModelConverterTest {
         MavenProject proj = Mockito.mock(MavenProject.class);
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
+        Mockito.when(proj.getGroupId()).thenReturn("g");
+        Mockito.when(proj.getArtifactId()).thenReturn("a");
         Mockito.when(proj.getVersion()).thenReturn("1.0");
         final Properties projProps = new Properties();
         Mockito.when(proj.getProperties()).thenReturn(projProps);
@@ -122,6 +124,7 @@ public class FeatureModelConverterTest {
         Mockito.when(proj.getBasedir()).thenReturn(projBaseDir);
         Mockito.when(proj.getBuild()).thenReturn(build);
         Mockito.when(proj.getGroupId()).thenReturn("generated");
+        Mockito.when(proj.getArtifactId()).thenReturn("a");
         Mockito.when(proj.getVersion()).thenReturn("0.0.1-SNAPSHOT");
         final Properties projProps = new Properties();
         Mockito.when(proj.getProperties()).thenReturn(projProps);
