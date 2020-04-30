@@ -74,6 +74,7 @@ public class GenerateResourcesMojoTest {
         Mockito.when(proj.getGroupId()).thenReturn("g");
         Mockito.when(proj.getArtifactId()).thenReturn("a");
         Mockito.when(proj.getVersion()).thenReturn("1");
+        Mockito.when(proj.getBasedir()).thenReturn(featureDir.getParentFile());
         final Properties projProps = new Properties();
         Mockito.when(proj.getProperties()).thenReturn(projProps);
         File f = new File(System.getProperty("user.home") + File.separatorChar + ".m2");
@@ -84,7 +85,7 @@ public class GenerateResourcesMojoTest {
         Mockito.when(session.getLocalRepository()).thenReturn(localRepo);
 
         GenerateResourcesMojo grm = new GenerateResourcesMojo();
-        setPrivateField(grm, "featuresDirectory", featureDir.getAbsolutePath());
+        setPrivateField(grm, "featuresDirectory", featureDir.getName());
         setPrivateField(AbstractSlingStartMojo.class, grm, "project", proj);
         setPrivateField(AbstractSlingStartMojo.class, grm, "mavenSession", session);
 
