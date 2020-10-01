@@ -13,5 +13,7 @@ maven-eclipse.xml
 *.bak
 .vlt
 .DS_Store
+.factorypath
+.vscode
 jcr.log
 atlassian-ide-plugin.xml

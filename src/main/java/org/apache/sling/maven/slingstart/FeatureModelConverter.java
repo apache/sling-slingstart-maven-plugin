@@ -146,6 +146,17 @@ public class FeatureModelConverter {
                     }
                     String json = readFeatureFile(project, f, suggestedClassifier);
 
+                    // handle extensions
+                    try (final Reader reader = new StringReader(json)) {
+                        final Feature feature = FeatureJSONReader.read(reader, f.getAbsolutePath());
+                        JSONFeatures.handleExtensions(feature, f);
+                        try (final Writer writer = new StringWriter()) {
+                            FeatureJSONWriter.write(writer, feature);
+                            writer.flush();
+                            json = writer.toString();
+                        }
+                    }
+
                     // check for prov model name
                     if (defaultProvName != null || featureFile.runModes != null || featureFile.model != null) {
                         try (final Reader reader = new StringReader(json)) {
